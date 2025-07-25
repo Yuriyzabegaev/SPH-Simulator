@@ -96,24 +96,6 @@ class Simulation {
 
     ExternalBoundaries m_boundaries;
 
-  public:
-    std::vector<std::unique_ptr<Particle>> m_particles;
-    Grid m_grid;
-
-    Simulation() = delete;
-    Simulation(Grid grid, std::vector<std::unique_ptr<Particle>> particles)
-        : m_boundaries(grid.m_domain_limits), m_particles(std::move(particles)),
-          m_grid(std::move(grid)) {
-        for (auto &particle : m_particles) {
-            m_grid.add_particle(particle.get());
-        }
-    }
-
-    // void add_particle(const Particle particle) {
-    //     m_particles.push_back(std::move(particle));
-    //     m_grid.add_particle(&m_particles.back());
-    // }
-
     void update_density_pair_cells(Particle *p1, Particle *p2) const {
         vec3<double> r = p2->position - p1->position;
         double r_norm = std::sqrt(r.dot(r));
@@ -227,6 +209,37 @@ class Simulation {
                 m_grid.remove_particle(particle.get(), old_grid_cell);
                 m_grid.add_particle(particle.get());
             }
+        }
+    }
+
+  public:
+    std::vector<std::unique_ptr<Particle>> m_particles;
+    Grid m_grid;
+
+    Simulation() = delete;
+    Simulation(Grid grid, std::vector<std::unique_ptr<Particle>> particles)
+        : m_boundaries(grid.m_domain_limits), m_particles(std::move(particles)),
+          m_grid(std::move(grid)) {
+        for (auto &particle : m_particles) {
+            m_grid.add_particle(particle.get());
+        }
+    }
+
+    void add_particle(const Particle particle) {
+        m_particles.emplace_back(
+            std::make_unique<Particle>(std::move(particle)));
+        m_grid.add_particle(m_particles.back().get());
+    }
+
+    void apply_external_force(vec3<double> position, vec3<double> acceleration,
+                              double radius) {
+        for (auto &particle : m_particles) {
+            auto r = particle->position - position;
+            auto distance = std::sqrt(r.dot(r));
+            if (distance >= radius) {
+                continue;
+            }
+            particle->force += particle->mass * acceleration;
         }
     }
 
