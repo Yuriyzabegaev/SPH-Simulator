@@ -1,12 +1,22 @@
 #pragma once
 #include "particle.hpp"
 #include "vec3.hpp"
+#include <cassert>
 #include <stdexcept>
+#include <unordered_map>
 #include <unordered_set>
 #include <vector>
 
 class Grid {
     std::vector<std::unordered_set<Particle *>> m_grid;
+
+    inline size_t idx_1d(const vec3<size_t> &idx_3d) const {
+        return idx_1d(idx_3d.z, idx_3d.y, idx_3d.x);
+    }
+
+    inline size_t idx_1d(size_t z, size_t y, size_t x) const {
+        return (z * m_grid_dims.y + y) * m_grid_dims.x + x;
+    }
 
   public:
     const vec3<double> m_domain_limits;
@@ -33,21 +43,13 @@ class Grid {
         };
     }
 
-    inline vec3<size_t> idx_3d(size_t idx_1d) const {
-        return {
-            idx_1d / (m_grid_dims.y * m_grid_dims.x),
-            (idx_1d / m_grid_dims.x) % m_grid_dims.y,
-            idx_1d % m_grid_dims.x,
-        };
-    }
-
-    inline size_t idx_1d(const vec3<size_t> &idx_3d) const {
-        return idx_1d(idx_3d.z, idx_3d.y, idx_3d.x);
-    }
-
-    inline size_t idx_1d(size_t z, size_t y, size_t x) const {
-        return (z * m_grid_dims.y + y) * m_grid_dims.x + x;
-    }
+    // inline vec3<size_t> idx_3d(size_t idx_1d) const {
+    //     return {
+    //         idx_1d / (m_grid_dims.y * m_grid_dims.x),
+    //         (idx_1d / m_grid_dims.x) % m_grid_dims.y,
+    //         idx_1d % m_grid_dims.x,
+    //     };
+    // }
 
     const std::unordered_set<Particle *> &
     particles_in_cell(const vec3<size_t> &cell) const {
@@ -55,10 +57,7 @@ class Grid {
     }
 
     void add_particle(Particle *particle) {
-        if (!within_domain_bounds(particle->position)) {
-            throw std::out_of_range(
-                "Particle position is out of domain bounds");
-        }
+        assert(within_domain_bounds(particle->position));
         m_grid[idx_1d(position_to_cell(particle->position))].insert(particle);
     }
 
@@ -71,9 +70,5 @@ class Grid {
         return (pos.z >= -tol && pos.z <= (m_domain_limits.z + tol) &&
                 pos.y >= -tol && pos.y <= (m_domain_limits.y + tol) &&
                 pos.x >= -tol && pos.x <= (m_domain_limits.x + tol));
-    }
-
-    inline const std::vector<std::unordered_set<Particle *>> &grid() const {
-        return m_grid;
     }
 };

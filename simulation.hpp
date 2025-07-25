@@ -97,15 +97,15 @@ class Simulation {
     ExternalBoundaries m_boundaries;
 
   public:
-    std::vector<Particle> m_particles;
+    std::vector<std::unique_ptr<Particle>> m_particles;
     Grid m_grid;
 
     Simulation() = delete;
-    Simulation(Grid grid, std::vector<Particle> particles)
+    Simulation(Grid grid, std::vector<std::unique_ptr<Particle>> particles)
         : m_boundaries(grid.m_domain_limits), m_particles(std::move(particles)),
           m_grid(std::move(grid)) {
         for (auto &particle : m_particles) {
-            m_grid.add_particle(&particle);
+            m_grid.add_particle(particle.get());
         }
     }
 
@@ -125,9 +125,9 @@ class Simulation {
 
     void update_densities() {
         for (size_t i = 0; i < m_particles.size(); ++i) {
-            Particle &p = m_particles[i];
-            double W_ = W(0, p.radius * 2);
-            p.density = p.mass * W_;
+            Particle *p = m_particles[i].get();
+            double W_ = W(0, p->radius * 2);
+            p->density = p->mass * W_;
         }
         for_pair_neighbor_cells(m_grid, [&](Particle *p1, Particle *p2) {
             update_density_pair_cells(p1, p2);
@@ -178,7 +178,7 @@ class Simulation {
 
     void update_forces() {
         for (size_t i = 0; i < m_particles.size(); ++i) {
-            update_gravity_force(&m_particles[i]);
+            update_gravity_force(m_particles[i].get());
         }
 
         for_pair_neighbor_cells(m_grid, [&](Particle *p1, Particle *p2) {
@@ -189,12 +189,12 @@ class Simulation {
 
     void update_positions(double dt) {
         for (auto &particle : m_particles) {
-            assert(!isnan(particle.force));
+            assert(!isnan(particle->force));
 
-            auto old_grid_cell = m_grid.position_to_cell(particle.position);
-            const auto old_position = particle.position;
+            auto old_grid_cell = m_grid.position_to_cell(particle->position);
+            const auto old_position = particle->position;
 
-            particle.velocity += particle.force / particle.mass * dt;
+            particle->velocity += particle->force / particle->mass * dt;
 
             // // Velocity limiter
             // double max_velocity =
@@ -207,28 +207,25 @@ class Simulation {
             // particle.velocity.x =
             //     std::clamp(particle.velocity.x, -max_velocity, max_velocity);
 
-            particle.position += particle.velocity * dt;
+            particle->position += particle->velocity * dt;
 
             // Reset force for the next iteration
-            particle.force = {0, 0, 0};
+            particle->force = {0, 0, 0};
 
             // Collisions
-            m_boundaries.handle_collision(old_position, particle.position,
-                                          particle.velocity);
+            m_boundaries.handle_collision(old_position, particle->position,
+                                          particle->velocity);
 
-            particle.position.z = m_grid.m_domain_limits.z / 2;
-            particle.velocity.z = 0;
+            particle->position.z = m_grid.m_domain_limits.z / 2;
+            particle->velocity.z = 0;
 
-            if (!m_grid.within_domain_bounds(particle.position)) {
-                throw std::out_of_range(
-                    "Particle position is out of domain bounds");
-            }
+            assert(m_grid.within_domain_bounds(particle->position));
 
             // Update particle position in the grid
-            auto new_grid_cell = m_grid.position_to_cell(particle.position);
+            auto new_grid_cell = m_grid.position_to_cell(particle->position);
             if (new_grid_cell != old_grid_cell) {
-                m_grid.remove_particle(&particle, old_grid_cell);
-                m_grid.add_particle(&particle);
+                m_grid.remove_particle(particle.get(), old_grid_cell);
+                m_grid.add_particle(particle.get());
             }
         }
     }

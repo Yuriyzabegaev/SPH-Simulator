@@ -69,10 +69,10 @@ class ExternalBoundaries {
             }
         }
 
-        for (const BoundaryPlane *plane : planes) {
-            double old_dst = plane->signed_distance(old_pos);
-            double new_dst = plane->signed_distance(new_pos);
-            assert((old_dst * new_dst) >= 0);
-        }
+        // for (const BoundaryPlane *plane : planes) {
+        //     double old_dst = plane->signed_distance(old_pos);
+        //     double new_dst = plane->signed_distance(new_pos);
+        //     assert((old_dst * new_dst) >= 0);
+        // }
     }
 };

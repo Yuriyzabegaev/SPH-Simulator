@@ -29,20 +29,20 @@ class SFMLRenderer {
         for (const auto &particle : m_sim.m_particles) {
             // Convert particle position to window coordinates
             float x =
-                particle.position.x * 800 / m_sim.m_grid.m_domain_limits.x;
-            float y = 600 - (particle.position.y * 600 /
+                particle->position.x * 800 / m_sim.m_grid.m_domain_limits.x;
+            float y = 600 - (particle->position.y * 600 /
                              m_sim.m_grid.m_domain_limits.y);
             x = std::clamp(x, 0.f, 800.f);
             y = std::clamp(y, 0.f, 600.f);
 
-            float radius = particle.radius * std::max(m_scale_y, m_scale_x);
+            float radius = particle->radius * std::max(m_scale_y, m_scale_x);
 
             sf::CircleShape shape(radius);
             shape.setOrigin(radius, radius);
             shape.setPosition(x, y);
             shape.setOutlineColor(sf::Color::Blue);
-            shape.setFillColor(sf::Color(particle.color[0], particle.color[1],
-                                         particle.color[2], particle.opacity));
+            shape.setFillColor(sf::Color(particle->color[0], particle->color[1],
+                                         particle->color[2], particle->opacity));
             m_window.draw(shape);
         }
 
