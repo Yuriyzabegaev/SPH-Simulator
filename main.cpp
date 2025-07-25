@@ -1,5 +1,4 @@
 #include "grid.hpp"
-#include "materials.hpp"
 #include "renderer.hpp"
 #include "simulation.hpp"
 #include <algorithm>
@@ -7,12 +6,18 @@
 #include <memory>
 
 int main() {
-    Grid grid(vec3<size_t>{1, 4, 4}, vec3<double>{0.5, 1, 1});
+    Grid grid(vec3<size_t>{1, 30, 40}, vec3<double>{0.5, 6., 8.});
 
     std::vector<Particle> particles;
-    for (auto i = 0; i < 50; ++i) {
-        particles.emplace_back(Particle{{0.25, .25, .25}});
+    for (auto i = 12; i < 42; ++i) {
+        for (auto j = 12; j < 42; ++j) {
+            particles.emplace_back(
+                Particle{{0.25, .12 * j, .16 * i}, 0.1, 4.19});
+        }
     }
+    Particle p({0.25, 3., 0.}, 0.1, 4.19);
+    p.velocity.x += 1;
+    particles.emplace_back(std::move(p));
 
     Simulation simulation(std::move(grid), std::move(particles));
     SFMLRenderer renderer(std::move(simulation));

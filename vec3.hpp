@@ -1,5 +1,7 @@
 #pragma once
 
+#include <cmath>
+
 template <typename T> struct vec3 {
     T z, y, x;
 
@@ -113,3 +115,7 @@ template <typename T> struct vec3 {
         return (a.z == b.z && a.y == b.y && a.x == b.x);
     }
 };
+
+template <typename T> bool isnan(const vec3<T> &x) {
+    return std::isnan(x.x) || std::isnan(x.y) || std::isnan(x.z);
+}

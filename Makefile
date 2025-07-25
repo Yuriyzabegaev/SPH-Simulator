@@ -1,5 +1,6 @@
 CXX = g++
-CXXFLAGS = -g -fsanitize=address,undefined -std=c++20 -Wall -Wextra -lsfml-graphics -lsfml-window -lsfml-system
+CXXFLAGS = -g -std=c++20 -Wall -Wextra
+LDFLAGS = -lsfml-graphics -lsfml-window -lsfml-system
 
 SRC = main.cpp
 OBJDIR = build
@@ -20,7 +21,7 @@ $(OBJDIR)/%.o: %.cpp | $(OBJDIR)
 
 # Link all .o into final executable
 $(TARGET): $(OBJ)
-	$(CXX) $(CXXFLAGS) $(OBJ) -o $@
+	$(CXX) $(OBJ) -o $@ $(LDFLAGS)
 
 # Include dependency files if they exist
 -include $(DEP)
