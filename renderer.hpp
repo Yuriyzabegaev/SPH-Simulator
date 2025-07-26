@@ -22,75 +22,69 @@ std::array<int, 3> blue_to_red_gradient(float value, float max_value) {
 }
 
 class SFMLRenderer {
-    float m_scale_sim_to_window;
-    bool m_is_window_closed = false;
-    bool m_is_dragging = false;
-    int m_mouse_x = -1;
-    int m_mouse_y = -1;
-    const double m_dt =
+    float scale_sim_to_window_;
+    bool is_window_closed_ = false;
+    bool is_dragging_ = false;
+    int mouse_x_ = -1;
+    int mouse_y_ = -1;
+    const double dt_ =
         static_cast<double>(target_frame_ms) / 1000; // Time step
-    float m_drag_radius = 100.f;
-    Simulation m_sim;
-    sf::RenderWindow m_window{sf::VideoMode(800, 600), "Particles"};
+    float drag_radius_ = 100.f;
+    Simulation sim_;
+    sf::RenderWindow window_{sf::VideoMode(800, 600), "Particles"};
 
     inline std::array<float, 2> tranform_to_simulation_coords(int x, int y) {
-        float sim_x = x * m_sim.m_grid.m_domain_limits.x / 800.f;
-        float sim_y = (600.f - y) * m_sim.m_grid.m_domain_limits.y / 600.f;
+        float sim_x = x * sim_.grid_.domain_limits_.x / 800.f;
+        float sim_y = (600.f - y) * sim_.grid_.domain_limits_.y / 600.f;
         return {sim_x, sim_y};
     }
 
     void handle_start_drag(const sf::Event &event) {
-        m_is_dragging = true;
-        auto pos = m_window.mapPixelToCoords(
+        is_dragging_ = true;
+        auto pos = window_.mapPixelToCoords(
             {event.mouseButton.x, event.mouseButton.y});
-        m_mouse_x = pos.x;
-        m_mouse_y = pos.y;
+        mouse_x_ = pos.x;
+        mouse_y_ = pos.y;
     }
 
-    void handle_end_drag(const sf::Event &event) { m_is_dragging = false; }
+    void handle_end_drag(const sf::Event &event) {
+        (void)event;
+        is_dragging_ = false;
+    }
 
     void handle_move_drag(const sf::Event &event) {
-        assert(m_is_dragging);
+        assert(is_dragging_);
         auto pos =
-            m_window.mapPixelToCoords({event.mouseMove.x, event.mouseMove.y});
-        auto [sim_x, sim_y] = tranform_to_simulation_coords(pos.x, pos.y);
-        auto [prev_x, prev_y] =
-            tranform_to_simulation_coords(m_mouse_x, m_mouse_y);
-        vec3<double> v{0, sim_y - prev_y, sim_x - prev_x};
-        v /= m_dt * m_dt * 10;
-        m_sim.apply_external_force(
-            {m_sim.m_grid.m_domain_limits.z / 2, sim_y, sim_x}, v,
-            m_drag_radius / m_scale_sim_to_window);
-
-        m_mouse_x = event.mouseMove.x;
-        m_mouse_y = event.mouseMove.y;
+            window_.mapPixelToCoords({event.mouseMove.x, event.mouseMove.y});
+        mouse_x_ = pos.x;
+        mouse_y_ = pos.y;
     }
 
     void handle_add_particle(const sf::Event &event) {
-        auto pos = m_window.mapPixelToCoords(
+        auto pos = window_.mapPixelToCoords(
             {event.mouseButton.x, event.mouseButton.y});
         // Reverse transformation: window coordinates to simulation
         // coordinates
         auto [sim_x, sim_y] = tranform_to_simulation_coords(pos.x, pos.y);
-        m_sim.add_particle(Particle({0.25, sim_y, sim_x}, 0.1, 1000));
+        sim_.add_particle(Particle({sim_.grid_.domain_limits_.z / 2, sim_y, sim_x}, 1000));
     }
 
     void handle_events() {
         sf::Event event;
-        while (m_window.pollEvent(event)) {
+        while (window_.pollEvent(event)) {
             if (event.type == sf::Event::Closed) {
-                m_window.close();
-                m_is_window_closed = true;
+                window_.close();
+                is_window_closed_ = true;
                 break;
             } else if (event.type == sf::Event::MouseButtonPressed) {
                 if (event.mouseButton.button == sf::Mouse::Button::Right)
                     handle_add_particle(event);
                 else if (event.mouseButton.button == sf::Mouse::Button::Left)
                     handle_start_drag(event);
-            } else if ((event.type == sf::Event::MouseMoved) && m_is_dragging) {
+            } else if ((event.type == sf::Event::MouseMoved) && is_dragging_) {
                 handle_move_drag(event);
             } else if ((event.type == sf::Event::MouseButtonReleased) &&
-                       m_is_dragging &&
+                       is_dragging_ &&
                        event.mouseButton.button == sf::Mouse::Button::Left) {
                 handle_end_drag(event);
             } else if (event.type == sf::Event::LostFocus) {
@@ -99,19 +93,27 @@ class SFMLRenderer {
         }
     }
 
-    bool render() {
-        m_window.clear(sf::Color::White);
+    void apply_central_force(double value) {
+        auto [sim_x, sim_y] =
+            tranform_to_simulation_coords(mouse_x_, mouse_y_);
+        sim_.apply_central_force(
+            {sim_.grid_.domain_limits_.z / 2, sim_y, sim_x}, value,
+            drag_radius_ / scale_sim_to_window_);
+    }
 
-        for (const auto &particle : m_sim.m_particles) {
+    void render() {
+        window_.clear(sf::Color::White);
+
+        for (const auto &particle : sim_.particles_) {
             // Convert particle position to window coordinates
             float x =
-                particle->position.x * 800 / m_sim.m_grid.m_domain_limits.x;
+                particle->position.x * 800 / sim_.grid_.domain_limits_.x;
             float y = 600 - (particle->position.y * 600 /
-                             m_sim.m_grid.m_domain_limits.y);
+                             sim_.grid_.domain_limits_.y);
             x = std::clamp(x, 0.f, 800.f);
             y = std::clamp(y, 0.f, 600.f);
 
-            float radius = particle->radius * m_scale_sim_to_window;
+            float radius = PARTICLE_RADIUS * scale_sim_to_window_;
 
             sf::CircleShape shape(radius / 2);
             shape.setOrigin(radius, radius);
@@ -121,36 +123,38 @@ class SFMLRenderer {
             // auto color = blue_to_red_gradient(particle->density - 2000, 500);
 
             shape.setFillColor(sf::Color(color[0], color[1], color[2], 100));
-            m_window.draw(shape);
+            window_.draw(shape);
         }
 
-        if (m_is_dragging) {
-            sf::CircleShape drag_circle(m_drag_radius);
-            drag_circle.setOrigin(m_drag_radius, m_drag_radius);
-            drag_circle.setPosition({m_mouse_x, m_mouse_y});
+        if (is_dragging_) {
+            apply_central_force(30.);
+            sf::CircleShape drag_circle(drag_radius_);
+            drag_circle.setOrigin(drag_radius_, drag_radius_);
+            drag_circle.setPosition(
+                {static_cast<float>(mouse_x_), static_cast<float>(mouse_y_)});
             drag_circle.setOutlineColor(sf::Color::Black);
             drag_circle.setFillColor(sf::Color::Transparent);
             drag_circle.setOutlineThickness(1);
-            m_window.draw(drag_circle);
+            window_.draw(drag_circle);
         }
 
         handle_events();
-        m_window.display();
+        window_.display();
     }
 
   public:
-    SFMLRenderer(Simulation sim) : m_sim(std::move(sim)) {
-        auto scale_x = 800. / m_sim.m_grid.m_domain_limits.x;
-        auto scale_y = 600. / m_sim.m_grid.m_domain_limits.y;
-        m_scale_sim_to_window = std::max(scale_y, scale_x);
+    SFMLRenderer(Simulation sim) : sim_(std::move(sim)) {
+        auto scale_x = 800. / sim_.grid_.domain_limits_.x;
+        auto scale_y = 600. / sim_.grid_.domain_limits_.y;
+        scale_sim_to_window_ = std::max(scale_y, scale_x);
     }
 
     void run_until_complete() {
 
-        while (!m_is_window_closed) {
+        while (window_.isOpen()) {
             auto frame_start = std::chrono::steady_clock::now();
             render();
-            m_sim.update(m_dt);
+            sim_.update(dt_);
             auto frame_end = std::chrono::steady_clock::now();
             auto frame_duration =
                 std::chrono::duration_cast<std::chrono::milliseconds>(
