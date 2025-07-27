@@ -1,6 +1,6 @@
-#include "grid.hpp"
-#include "renderer.hpp"
-#include "simulation.hpp"
+#include "../core/grid.hpp"
+#include "../core/renderer.hpp"
+#include "../core/simulation.hpp"
 #include <algorithm>
 #include <cmath>
 #include <memory>

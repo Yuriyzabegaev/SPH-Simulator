@@ -10,7 +10,6 @@
 #include <functional>
 #include <thread>
 
-
 constexpr int8_t OFFESTS_3X3[27][3] = {
     {-1, -1, -1}, {-1, -1, 0}, {-1, -1, 1}, {-1, 0, -1}, {-1, 0, 0}, {-1, 0, 1},
     {-1, 1, -1},  {-1, 1, 0},  {-1, 1, 1},  {0, -1, -1}, {0, -1, 0}, {0, -1, 1},
@@ -18,7 +17,7 @@ constexpr int8_t OFFESTS_3X3[27][3] = {
     {1, -1, -1},  {1, -1, 0},  {1, -1, 1},  {1, 0, -1},  {1, 0, 0},  {1, 0, 1},
     {1, 1, -1},   {1, 1, 0},   {1, 1, 1}};
 
-double W(double r, double h) {
+static double W(double r, double h) {
     double q = r / h;
     double sigma_3d = 8 / (M_PI * h * h * h);
     assert(q >= 0);
@@ -32,7 +31,7 @@ double W(double r, double h) {
     }
 }
 
-double gradW(double r, double h) {
+static double gradW(double r, double h) {
     double q = r / h;
     double sigma_3d = 8 / (M_PI * h * h * h);
     assert(q >= 0);
@@ -46,7 +45,7 @@ double gradW(double r, double h) {
     }
 }
 
-double compute_pressure(const Particle *p) {
+static double compute_pressure(const Particle *p) {
     const double RHO_0 = 1000;
     const double k = 100;
     double density_diff = std::max(p->density - RHO_0, 0.);
@@ -54,11 +53,12 @@ double compute_pressure(const Particle *p) {
 }
 
 /**
- * @brief Calls the inner function for each pair of particles within the same and
- * neighboring cells. Each pair is guaranteed to be called exactly once.
+ * @brief Calls the inner function for each pair of particles within the same
+ * and neighboring cells. Each pair is guaranteed to be called exactly once.
  */
-void for_pair_neighbor_cells(
-    const Grid &grid, std::function<void(Particle *, Particle *)> inner) {
+static void
+for_pair_neighbor_cells(const Grid &grid,
+                        std::function<void(Particle *, Particle *)> inner) {
     for (size_t i = 0; i < grid.grid_dims_.z; ++i) {
         for (size_t j = 0; j < grid.grid_dims_.y; ++j) {
             for (size_t k = 0; k < grid.grid_dims_.x; ++k) {
@@ -71,8 +71,7 @@ void for_pair_neighbor_cells(
                         continue;
                     size_t i1 = i + di, j1 = j + dj, k1 = k + dk;
                     if ((i1 >= grid.grid_dims_.z) ||
-                        (j1 >= grid.grid_dims_.y) ||
-                        (k1 >= grid.grid_dims_.x))
+                        (j1 >= grid.grid_dims_.y) || (k1 >= grid.grid_dims_.x))
                         continue;
 
                     auto &particles_cell_2 =
@@ -171,7 +170,7 @@ class Simulation {
             std::min(grid_.grid_cell_size_.x, grid_.grid_cell_size_.y);
         min_cell_size = std::min(min_cell_size, grid_.grid_cell_size_.z);
         double vmax = min_cell_size / dt;
-        
+
         for (auto &particle : particles_) {
             assert(!isnan(particle->force));
 
@@ -182,9 +181,12 @@ class Simulation {
             particle->velocity += particle->force / particle->mass * dt;
 
             // CFL limiter
-            particle->velocity.x = std::clamp(particle->velocity.x, -vmax, vmax);
-            particle->velocity.y = std::clamp(particle->velocity.y, -vmax, vmax);
-            particle->velocity.z = std::clamp(particle->velocity.z, -vmax, vmax);
+            particle->velocity.x =
+                std::clamp(particle->velocity.x, -vmax, vmax);
+            particle->velocity.y =
+                std::clamp(particle->velocity.y, -vmax, vmax);
+            particle->velocity.z =
+                std::clamp(particle->velocity.z, -vmax, vmax);
 
             particle->position += particle->velocity * dt;
 
@@ -194,11 +196,10 @@ class Simulation {
             // Handling 2D simulation
             particle->position.z = grid_.domain_limits_.z / 2;
             particle->velocity.z = 0;
-            
+
             // Collisions
             boundaries_.handle_collision(old_position, particle->position,
-                                          particle->velocity);
-
+                                         particle->velocity);
 
             assert(grid_.within_domain_bounds(particle->position));
 
@@ -246,5 +247,14 @@ class Simulation {
         update_densities();
         update_forces();
         update_positions(dt);
+    }
+
+    std::vector<Particle *> get_particles_raw() {
+        std::vector<Particle *> ptrs;
+        ptrs.reserve(particles_.size());
+        for (auto &uptr : particles_) {
+            ptrs.push_back(uptr.get());
+        }
+        return ptrs;
     }
 };

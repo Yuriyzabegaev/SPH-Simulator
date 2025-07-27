@@ -5,7 +5,7 @@
 template <typename T> struct vec3 {
     T z, y, x;
 
-    vec3() = delete;
+    vec3() : z(0), y(0), x(0) {};
     vec3(T z, T y, T x) : z(z), y(y), x(x) {};
 
     double dot(const vec3 &other) const {
