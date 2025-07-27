@@ -145,7 +145,7 @@ class Simulation {
             return;
         }
         double gradW_ = gradW(r_norm, 2 * PARTICLE_RADIUS);
-        const double visc = 0.02;
+        const double visc = 0.05;
         // F_i = m_i * visc * Sum_j (m_j / rho_j * (v_j - v_i) * 2 ||nabla W||
         // / ||r||)
         auto visc_force = (-1) * p1->mass * visc * p2->mass *

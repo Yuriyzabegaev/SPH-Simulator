@@ -1,6 +1,7 @@
 #include "../core/grid.hpp"
 #include "../core/simulation.hpp"
 #include <emscripten/bind.h>
+#include <memory>
 
 std::shared_ptr<Simulation> initialize_simulation() {
     vec3<size_t> grid_cell_size = {1, 60, 80};
@@ -51,7 +52,7 @@ EMSCRIPTEN_BINDINGS(particle_bindings) {
 }
 
 EMSCRIPTEN_BINDINGS(particle_vector) {
-    emscripten::register_vector<Particle*>("VectorParticlePtr");
+    emscripten::register_vector<Particle *>("VectorParticlePtr");
 }
 
 // Grid binding
