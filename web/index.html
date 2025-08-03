@@ -4,7 +4,7 @@
   </div>
 
   <!-- <div id="simulation-container" style="width: 800px; height: 600px; border: 1px solid black; position: relative;"> -->
-  <canvas id="simulationCanvas" width="800" height="600"></canvas>
+  <canvas id="simulationCanvas" width="1200" height="800"></canvas>
 
   <div style="display: flex; flex-direction: column;">
     <div>
@@ -23,11 +23,20 @@
       <span id="specificVolumeSliderValue">50</span>
     </div>
     <div>
+      <div>New particles density:</div>
+      <input id="densitySlider" type="range" min="0" max="100" value="50" />
+      <span id="densitySliderValue">50</span>
+    </div>
+    <div>
       <div>Mouse interaction:</div>
       <select id="mouseInteractionSelector">
         <option value="Force">Attracting/Repulsing Force</option>
         <option value="Particles">Add/Remove Particles</option>
       </select>
+    </div>
+    <div style="display: flex;">
+      <div>Number of particles: </div>
+      <div id="numberOfParticlesValue">-1</div>
     </div>
   </div>
 

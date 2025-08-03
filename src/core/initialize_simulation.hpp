@@ -2,7 +2,7 @@
 #include <memory>
 
 std::shared_ptr<Simulation> initialize_simulation() {
-    vec3<size_t> grid_cell_size = {1, 25, 35};
+    vec3<size_t> grid_cell_size = {1, 60, 80};
     vec3<double> grid_limits = {
         static_cast<double>(grid_cell_size.z),
         static_cast<double>(grid_cell_size.y),

@@ -8,6 +8,7 @@
 
 int main() {
     auto simulation = initialize_simulation();
+    simulation->remove_particle_at({0, 0.3, 0.3});
     SFMLRenderer renderer(std::move(simulation));
     renderer.run_until_complete();
 }

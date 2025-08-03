@@ -8,6 +8,7 @@
 #include <chrono>
 #include <cmath>
 #include <functional>
+#include <limits>
 #include <thread>
 
 constexpr int8_t OFFESTS_3X3[27][3] = {
@@ -226,20 +227,53 @@ class Simulation {
     Simulation(Grid grid, std::vector<std::unique_ptr<Particle>> particles)
         : boundaries_(grid.domain_limits_), particles_(std::move(particles)),
           grid_(std::move(grid)) {
-        int i = 0;
         for (auto &particle : particles_) {
-            print(i);
-            i++;
-            assert(particle);                   // check unique_ptr is non-null
-            assert(particle->mass); // force deref to validate
             grid_.add_particle(particle.get());
         }
     }
 
-    void add_particle(const Particle particle) {
-        particles_.emplace_back(
-            std::make_unique<Particle>(std::move(particle)));
+    void add_particle(const vec3<double> position, double density) {
+        particles_.push_back(
+            std::make_unique<Particle>(make_particle(position, density)));
+        particles_.back()->velocity = {
+            0,
+            0,
+            static_cast<double>(rand()) / RAND_MAX * 1e-1,
+        };
+
         grid_.add_particle(particles_.back().get());
+    }
+
+    void remove_particle_at(const vec3<double> position) {
+        const auto cell = grid_.position_to_cell(position);
+        const auto &particles_in_cell = grid_.particles_in_cell(cell);
+
+        // search for closest particle.
+        Particle *particle_to_remove = nullptr;
+        double minimal_dist = std::numeric_limits<double>::infinity();
+        for (const auto p : particles_in_cell) {
+            auto dst = p->position - position;
+            auto dst_norm = dst.dot(dst);
+            if (dst_norm < minimal_dist) {
+                minimal_dist = dst_norm;
+                particle_to_remove = p;
+            }
+        }
+        if (particle_to_remove == nullptr) {
+            return;
+        }
+
+        // removing from grid.
+        grid_.remove_particle(particle_to_remove, cell);
+
+        // removing from particles.
+        auto it = std::find_if(particles_.begin(), particles_.end(),
+                               [&particle_to_remove](const auto &p1) {
+                                   return p1.get() == particle_to_remove;
+                               });
+        if (it != particles_.end()) {
+            particles_.erase(it);
+        }
     }
 
     void apply_central_force(vec3<double> center, double acceleration,

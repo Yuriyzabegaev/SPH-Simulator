@@ -19,9 +19,11 @@ EMSCRIPTEN_BINDINGS(vec3_bindings) {
 // Particle binding
 EMSCRIPTEN_BINDINGS(particle_bindings) {
     emscripten::class_<Particle>("Particle")
-        .constructor<vec3d, double>()
+        .constructor<vec3d, double, double>()
         .property("position", &Particle::position)
         .property("velocity", &Particle::velocity)
+        .property("density", &Particle::density)
+        .property("initial_density", &Particle::initial_density)
         .property("mass", &Particle::mass);
     emscripten::register_vector<Particle *>("VectorParticlePtr");
     emscripten::function("make_particle", &make_particle);
@@ -32,6 +34,7 @@ EMSCRIPTEN_BINDINGS(simulation_bindings) {
     emscripten::class_<Simulation>("Simulation")
         .smart_ptr<std::shared_ptr<Simulation>>("shared_ptr<Simulation>")
         .function("get_domain_limits", &Simulation::get_domain_limits)
+        .function("remove_particle_at", &Simulation::remove_particle_at)
         .function("apply_central_force", &Simulation::apply_central_force)
         .function("set_gravity", &Simulation::set_gravity)
         .function("set_specific_volume", &Simulation::set_specific_volume)

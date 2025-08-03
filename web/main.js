@@ -18,6 +18,28 @@ function configureSlider(params) {
   });
 }
 
+function makeGradient(x, xMin, xMax) {
+  const t = Math.max(0, Math.min(1, (x - xMin) / (xMax - xMin))); // clamp to [0,1]
+
+  let r, g, b;
+
+  if (t < 0.5) {
+    // pastel blue → pastel white
+    const t2 = t * 2;
+    r = Math.round(200 + 55 * t2); // 200–255
+    g = Math.round(200 + 55 * t2); // 200–255
+    b = 255;
+  } else {
+    // pastel white → pastel red
+    const t2 = (t - 0.5) * 2;
+    r = 255;
+    g = Math.round(255 - 55 * t2); // 255–200
+    b = Math.round(255 - 55 * t2); // 255–200
+  }
+
+  return [r, g, b];
+}
+
 class Rendered2D {
   constructor(sim) {
     this.sim = sim;
@@ -43,10 +65,22 @@ class Rendered2D {
     });
     configureSlider({
       sliderName: "specificVolumeSlider",
-      minVal: 1 / 200,
+      minVal: 1 / 100,
       maxVal: 1 / 10,
-      defaultVal: 1 / 100,
+      defaultVal: 1 / 50,
       setterMethod: (k) => this.sim.set_specific_volume(1 / k),
+    });
+    this.densityMin = 500;
+    this.densityMax = 2000;
+    this.newParticlesDensity = 1000;
+    configureSlider({
+      sliderName: "densitySlider",
+      minVal: this.densityMin,
+      maxVal: this.densityMax,
+      defaultVal: this.newParticlesDensity,
+      setterMethod: (rho) => {
+        this.newParticlesDensity = rho;
+      },
     });
 
     const mouseInteractionSelector = document.getElementById(
@@ -57,10 +91,15 @@ class Rendered2D {
       this.mouseInteractionSelectorState = mouseInteractionSelector.value;
     });
 
+    this.numberOfParticlesElement = document.getElementById(
+      "numberOfParticlesValue"
+    );
+    this.numberOfParticlesElement.textContent = this.sim.get_particles().size();
+
     // Mouse events
     // I want it to be screenHeight / 6. So it's screenHeight / 6 / screenHeight * simY.
     this.isDragging = false;
-    this.simDragRadius = 0.3 * this.domain_limits.y;
+    this.simDragRadius = 0.2 * this.domain_limits.y;
     this.lastX = 0;
     this.lastY = 0;
     this.dragButton = 0;
@@ -92,7 +131,7 @@ class Rendered2D {
   };
 
   applyCentralForce = () => {
-    const magnitude = this.dragButton == 0 ? 30 : -30;
+    const magnitude = this.dragButton === 0 ? 30 : -30;
     const simCoords = this.coordinatesScreenToSim({
       z: 0,
       y: this.lastY,
@@ -107,7 +146,12 @@ class Rendered2D {
       y: this.lastY,
       x: this.lastX,
     });
-     this.sim.add_particle(simCoords, 1000.);
+    if (this.dragButton === 0) {
+      this.sim.add_particle(simCoords, this.newParticlesDensity);
+    } else {
+      this.sim.remove_particle_at(simCoords);
+    }
+    this.numberOfParticlesElement.textContent = this.sim.get_particles().size();
   };
 
   coordinatesSimToScreen = (simCoords) => {
@@ -138,12 +182,35 @@ class Rendered2D {
     ctx.fillStyle = "black";
     ctx.fillRect(0, 0, this.width(), this.height());
 
-    ctx.fillStyle = "white";
     for (let i = 0; i < particles.size(); i++) {
       const p = particles.get(i);
+
+      const [r, g, b] = makeGradient(
+        p.density,
+        this.densityMin,
+        this.densityMax
+      );
+      // ctx.fillStyle = `rgb(${color[0]},${color[1]},${color[2]})`;
+      // ctx.fillStyle = `rgb(255,0,0)`;
+
+      const pos = this.coordinatesSimToScreen(p.position);
       ctx.beginPath();
-      const position = this.coordinatesSimToScreen(p.position);
-      ctx.arc(position.x, position.y, 3, 0, 2 * Math.PI);
+      ctx.arc(pos.x, pos.y, 4, 0, 2 * Math.PI);
+      const radius = 4;
+      const gradient = ctx.createRadialGradient(
+        pos.x,
+        pos.y,
+        0,
+        pos.x,
+        pos.y,
+        radius
+      );
+      gradient.addColorStop(0, `rgba(${r},${g},${b}, 1.0)`);
+      gradient.addColorStop(1, `rgba(${r},${g},${b}, 0.7)`);
+
+      ctx.fillStyle = gradient;
+      ctx.beginPath();
+      ctx.arc(pos.x, pos.y, radius, 0, 2 * Math.PI);
       ctx.fill();
     }
   };

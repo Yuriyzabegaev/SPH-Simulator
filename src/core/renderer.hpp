@@ -66,7 +66,7 @@ class SFMLRenderer {
         // Reverse transformation: window coordinates to simulation
         // coordinates
         auto [sim_x, sim_y] = tranform_to_simulation_coords(pos.x, pos.y);
-        sim_->add_particle(Particle({sim_->grid_.domain_limits_.z / 2, sim_y, sim_x}, 1000));
+        sim_->add_particle({sim_->grid_.domain_limits_.z / 2, sim_y, sim_x}, 1000);
     }
 
     void handle_events() {
