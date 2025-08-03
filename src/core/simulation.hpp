@@ -45,9 +45,8 @@ static double gradW(double r, double h) {
     }
 }
 
-static double compute_pressure(const Particle *p) {
+static double compute_pressure(const Particle *p, double k) {
     const double RHO_0 = 1000;
-    const double k = 100;
     double density_diff = std::max(p->density - RHO_0, 0.);
     return k * density_diff;
 }
@@ -89,9 +88,16 @@ for_pair_neighbor_cells(const Grid &grid,
     }
 }
 
+struct SimulationParameters {
+    double viscosity = 0.1;
+    double gravity = 9.8;
+    double specific_volume = 100;
+};
+
 class Simulation {
 
     ExternalBoundaries boundaries_;
+    SimulationParameters parameters_;
 
     void update_density_pair_cells(Particle *p1, Particle *p2) const {
         vec3<double> r = p2->position - p1->position;
@@ -122,8 +128,8 @@ class Simulation {
             return;
         }
         double gradW_ = gradW(r_norm, 2 * PARTICLE_RADIUS);
-        double pressure_1 = compute_pressure(p1);
-        double pressure_2 = compute_pressure(p2);
+        double pressure_1 = compute_pressure(p1, parameters_.specific_volume);
+        double pressure_2 = compute_pressure(p2, parameters_.specific_volume);
         double tmp = pressure_1 / (p1->density * p1->density) +
                      pressure_2 / (p1->density * p2->density);
         tmp *= gradW_;
@@ -134,7 +140,7 @@ class Simulation {
     }
 
     void update_gravity_force(Particle *p1) const {
-        p1->force.y -= 9.8 * p1->mass;
+        p1->force.y -= parameters_.gravity * p1->mass;
     }
 
     void update_viscous_force(Particle *p1, Particle *p2) const {
@@ -145,7 +151,7 @@ class Simulation {
             return;
         }
         double gradW_ = gradW(r_norm, 2 * PARTICLE_RADIUS);
-        const double visc = 0.05;
+        const double visc = parameters_.viscosity;
         // F_i = m_i * visc * Sum_j (m_j / rho_j * (v_j - v_i) * 2 ||nabla W||
         // / ||r||)
         auto visc_force = (-1) * p1->mass * visc * p2->mass *
@@ -243,6 +249,14 @@ class Simulation {
         }
     }
 
+    void set_viscosity(double viscosity) { parameters_.viscosity = viscosity; }
+
+    void set_gravity(double gravity) { parameters_.gravity = gravity; }
+
+    void set_specific_volume(double specific_volume) {
+        parameters_.specific_volume = specific_volume;
+    }
+
     void update(double dt) {
         update_densities();
         update_forces();
@@ -257,4 +271,6 @@ class Simulation {
         }
         return ptrs;
     }
+
+    vec3<double> get_domain_limits() { return grid_.domain_limits_; }
 };

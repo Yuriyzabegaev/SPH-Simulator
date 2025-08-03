@@ -6,6 +6,8 @@
 #include <unordered_map>
 #include <unordered_set>
 #include <vector>
+#include <memory>
+#include "../core/print.hpp"
 
 class Grid {
     std::vector<std::unordered_set<Particle *>> grid_;

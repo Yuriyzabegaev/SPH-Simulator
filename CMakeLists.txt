@@ -11,7 +11,7 @@ if(EMSCRIPTEN)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O3")
 else()
     set(CMAKE_BUILD_TYPE Debug)
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g -fsanitize=address,undefined -fno-omit-frame-pointer -O1")
 endif()
 
 # Shared C++ sources
@@ -38,16 +38,6 @@ if(EMSCRIPTEN)
         SUFFIX ".js"
         LINK_FLAGS "--bind -s MODULARIZE=1 -s EXPORT_NAME='SimModule' -s ALLOW_MEMORY_GROWTH=1"
     )
-
-    # Copy HTML, CSS, user JS into dist/
-    file(GLOB STATIC_FILES "web/*.html" "web/*.css" "web/*.js")
-    foreach(f IN LISTS STATIC_FILES)
-        add_custom_command(
-            TARGET web_module POST_BUILD
-            COMMAND ${CMAKE_COMMAND} -E copy_if_different
-                    ${f} ${WEB_DIST_DIR}
-        )
-    endforeach()
 
 # ========== Desktop build ==========
 else()

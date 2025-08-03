@@ -2,6 +2,7 @@
 #include "vec3.hpp"
 #include <cstdint>
 #include <utility>
+#include <memory>
 
 constexpr double PARTICLE_RADIUS = 0.1;
 

@@ -30,12 +30,12 @@ class SFMLRenderer {
     const double dt_ =
         static_cast<double>(target_frame_ms) / 1000; // Time step
     float drag_radius_ = 100.f;
-    Simulation sim_;
+    std::shared_ptr<Simulation> sim_;
     sf::RenderWindow window_{sf::VideoMode(800, 600), "Particles"};
 
     inline std::array<float, 2> tranform_to_simulation_coords(int x, int y) {
-        float sim_x = x * sim_.grid_.domain_limits_.x / 800.f;
-        float sim_y = (600.f - y) * sim_.grid_.domain_limits_.y / 600.f;
+        float sim_x = x * sim_->grid_.domain_limits_.x / 800.f;
+        float sim_y = (600.f - y) * sim_->grid_.domain_limits_.y / 600.f;
         return {sim_x, sim_y};
     }
 
@@ -66,7 +66,7 @@ class SFMLRenderer {
         // Reverse transformation: window coordinates to simulation
         // coordinates
         auto [sim_x, sim_y] = tranform_to_simulation_coords(pos.x, pos.y);
-        sim_.add_particle(Particle({sim_.grid_.domain_limits_.z / 2, sim_y, sim_x}, 1000));
+        sim_->add_particle(Particle({sim_->grid_.domain_limits_.z / 2, sim_y, sim_x}, 1000));
     }
 
     void handle_events() {
@@ -96,20 +96,20 @@ class SFMLRenderer {
     void apply_central_force(double value) {
         auto [sim_x, sim_y] =
             tranform_to_simulation_coords(mouse_x_, mouse_y_);
-        sim_.apply_central_force(
-            {sim_.grid_.domain_limits_.z / 2, sim_y, sim_x}, value,
+        sim_->apply_central_force(
+            {sim_->grid_.domain_limits_.z / 2, sim_y, sim_x}, value,
             drag_radius_ / scale_sim_to_window_);
     }
 
     void render() {
         window_.clear(sf::Color::White);
 
-        for (const auto &particle : sim_.particles_) {
+        for (const auto &particle : sim_->particles_) {
             // Convert particle position to window coordinates
             float x =
-                particle->position.x * 800 / sim_.grid_.domain_limits_.x;
+                particle->position.x * 800 / sim_->grid_.domain_limits_.x;
             float y = 600 - (particle->position.y * 600 /
-                             sim_.grid_.domain_limits_.y);
+                             sim_->grid_.domain_limits_.y);
             x = std::clamp(x, 0.f, 800.f);
             y = std::clamp(y, 0.f, 600.f);
 
@@ -143,9 +143,9 @@ class SFMLRenderer {
     }
 
   public:
-    SFMLRenderer(Simulation sim) : sim_(std::move(sim)) {
-        auto scale_x = 800. / sim_.grid_.domain_limits_.x;
-        auto scale_y = 600. / sim_.grid_.domain_limits_.y;
+    SFMLRenderer(std::shared_ptr<Simulation> sim) : sim_(sim) {
+        auto scale_x = 800. / sim->grid_.domain_limits_.x;
+        auto scale_y = 600. / sim->grid_.domain_limits_.y;
         scale_sim_to_window_ = std::max(scale_y, scale_x);
     }
 
@@ -154,7 +154,7 @@ class SFMLRenderer {
         while (window_.isOpen()) {
             auto frame_start = std::chrono::steady_clock::now();
             render();
-            sim_.update(dt_);
+            sim_->update(dt_);
             auto frame_end = std::chrono::steady_clock::now();
             auto frame_duration =
                 std::chrono::duration_cast<std::chrono::milliseconds>(
