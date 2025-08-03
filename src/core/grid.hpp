@@ -1,13 +1,13 @@
 #pragma once
+#include "../core/print.hpp"
 #include "particle.hpp"
 #include "vec3.hpp"
 #include <cassert>
+#include <memory>
 #include <stdexcept>
 #include <unordered_map>
 #include <unordered_set>
 #include <vector>
-#include <memory>
-#include "../core/print.hpp"
 
 class Grid {
     std::vector<std::unordered_set<Particle *>> grid_;
@@ -31,10 +31,10 @@ class Grid {
           }()),
           domain_limits_(std::move(domain_limits)),
           grid_dims_(std::move(grid_dims)), grid_cell_size_({
-                                                 domain_limits.z / grid_dims.z,
-                                                 domain_limits.y / grid_dims.y,
-                                                 domain_limits.x / grid_dims.x,
-                                             }) {}
+                                                domain_limits.z / grid_dims.z,
+                                                domain_limits.y / grid_dims.y,
+                                                domain_limits.x / grid_dims.x,
+                                            }) {}
 
     vec3<size_t> position_to_cell(const vec3<double> &position) const {
         return {
@@ -51,7 +51,12 @@ class Grid {
 
     void add_particle(Particle *particle) {
         assert(within_domain_bounds(particle->position));
-        grid_[idx_1d(position_to_cell(particle->position))].insert(particle);
+        size_t idx = idx_1d(position_to_cell(particle->position));
+        if (idx >= grid_.size()) {
+            // Handle error: out-of-bounds particle position
+            throw std::out_of_range("Particle position outside grid domain");
+        }
+        grid_[idx].insert(particle);
     }
 
     void remove_particle(Particle *particle, const vec3<size_t> &grid_cell) {

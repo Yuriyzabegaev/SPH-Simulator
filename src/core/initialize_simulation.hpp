@@ -12,10 +12,9 @@ std::shared_ptr<Simulation> initialize_simulation() {
     Grid grid(std::move(grid_cell_size), std::move(grid_limits));
 
     std::vector<std::unique_ptr<Particle>> particles;
-    particles.reserve(35 * 25);
-    for (auto j = 1; j < 30; ++j) {
+    for (auto j = 1; j < (grid_cell_size.y / 2); ++j) {
         for (auto i = 1; i < grid_cell_size.x - 1; ++i) {
-            particles.push_back(std::make_unique<Particle>(make_particle(
+            particles.emplace_back(std::make_unique<Particle>(make_particle(
                 {
                     grid_limits.z / 2,
                     PARTICLE_RADIUS * j,

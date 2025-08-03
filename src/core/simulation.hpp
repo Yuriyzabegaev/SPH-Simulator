@@ -226,7 +226,12 @@ class Simulation {
     Simulation(Grid grid, std::vector<std::unique_ptr<Particle>> particles)
         : boundaries_(grid.domain_limits_), particles_(std::move(particles)),
           grid_(std::move(grid)) {
+        int i = 0;
         for (auto &particle : particles_) {
+            print(i);
+            i++;
+            assert(particle);                   // check unique_ptr is non-null
+            assert(particle->mass); // force deref to validate
             grid_.add_particle(particle.get());
         }
     }
