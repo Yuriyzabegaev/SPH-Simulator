@@ -46,10 +46,42 @@ static double gradW(double r, double h) {
     }
 }
 
-static double compute_pressure(const Particle *p, double k) {
-    const double RHO_0 = 1000;
-    double density_diff = std::max(p->density - RHO_0, 0.);
-    return k * density_diff;
+static inline vec3<double> a(const Particle *p) { return p->force / p->mass; }
+
+static void clamp_velosity(Particle *p, double vmax) {
+    p->velocity.x = std::clamp(p->velocity.x, -vmax, vmax);
+    p->velocity.y = std::clamp(p->velocity.y, -vmax, vmax);
+    p->velocity.z = std::clamp(p->velocity.z, -vmax, vmax);
+}
+
+static void integrate_semi_implicit_euler(Particle *p, double dt, double vmax) {
+    p->velocity += a(p) * dt;
+
+    // CFL limiter
+    clamp_velosity(p, vmax);
+
+    p->position += p->velocity * dt;
+}
+
+static void integrateRK4(Particle *p, double dt, double vmax) {
+    auto k1_v = a(p);
+    auto k1_x = p->velocity;
+
+    auto k2_v = a(p); // force assumed constant over dt
+    auto k2_x = p->velocity + 0.5 * dt * k1_v;
+
+    auto k3_v = a(p);
+    auto k3_x = p->velocity + 0.5 * dt * k2_v;
+
+    auto k4_v = a(p);
+    auto k4_x = p->velocity + dt * k3_v;
+
+    p->velocity += (dt / 6.0) * (k1_v + 2.0 * k2_v + 2.0 * k3_v + k4_v);
+
+    // CFL limiter
+    clamp_velosity(p, vmax);
+
+    p->position += (dt / 6.0) * (k1_x + 2.0 * k2_x + 2.0 * k3_x + k4_x);
 }
 
 /**
@@ -90,10 +122,16 @@ for_pair_neighbor_cells(const Grid &grid,
 }
 
 struct SimulationParameters {
-    double viscosity = 0.1;
-    double gravity = 9.8;
-    double specific_volume = 100;
+    double viscosity = 0.2;
+    double gravity = 10;
+    double specific_volume = 0.01;
 };
+const double RHO_0 = 1;
+
+static double compute_pressure(const Particle *p, double k) {
+    double density_diff = std::max(p->density - RHO_0, 0.) / RHO_0;
+    return k * density_diff;
+}
 
 class Simulation {
 
@@ -108,6 +146,21 @@ class Simulation {
         p2->density += p1->mass * W_;
     }
 
+    void apply_artificial_viscosity_pair_cells(Particle *p1,
+                                               Particle *p2) const {
+        // artificial viscosity to reduce oscillations
+        auto r = p2->position - p1->position;
+        double r_norm = std::sqrt(r.dot(r));
+        double W_ = W(r_norm, 2 * PARTICLE_RADIUS);
+
+        auto delta_v = p2->velocity - p1->velocity;
+        auto rho = (p1->density + p2->density) / 2;
+
+        const double visc = 0.1;
+        p1->velocity += visc * p2->mass / rho * delta_v * W_;
+        p2->velocity -= visc * p1->mass / rho * delta_v * W_;
+    }
+
     void update_densities() {
         // First compute density influence of each particle to itself.
         for (size_t i = 0; i < particles_.size(); ++i) {
@@ -119,6 +172,11 @@ class Simulation {
         for_pair_neighbor_cells(grid_, [&](Particle *p1, Particle *p2) {
             update_density_pair_cells(p1, p2);
         });
+
+        for_pair_neighbor_cells(grid_, [&](Particle *p1, Particle *p2) {
+            apply_artificial_viscosity_pair_cells(p1, p2);
+        });
+
     }
 
     void update_pressure_force(Particle *p1, Particle *p2) const {
@@ -176,7 +234,7 @@ class Simulation {
         double min_cell_size =
             std::min(grid_.grid_cell_size_.x, grid_.grid_cell_size_.y);
         min_cell_size = std::min(min_cell_size, grid_.grid_cell_size_.z);
-        double vmax = min_cell_size / dt;
+        double vmax = 0.4 * min_cell_size / dt;
 
         for (auto &particle : particles_) {
             assert(!isnan(particle->force));
@@ -185,17 +243,7 @@ class Simulation {
             const auto old_position = particle->position;
 
             // Update velocity using forces
-            particle->velocity += particle->force / particle->mass * dt;
-
-            // CFL limiter
-            particle->velocity.x =
-                std::clamp(particle->velocity.x, -vmax, vmax);
-            particle->velocity.y =
-                std::clamp(particle->velocity.y, -vmax, vmax);
-            particle->velocity.z =
-                std::clamp(particle->velocity.z, -vmax, vmax);
-
-            particle->position += particle->velocity * dt;
+            integrateRK4(particle.get(), dt, vmax);
 
             // Reset force for the next iteration
             particle->force = {0, 0, 0};

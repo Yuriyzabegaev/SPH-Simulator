@@ -66,7 +66,7 @@ class SFMLRenderer {
         // Reverse transformation: window coordinates to simulation
         // coordinates
         auto [sim_x, sim_y] = tranform_to_simulation_coords(pos.x, pos.y);
-        sim_->add_particle({sim_->grid_.domain_limits_.z / 2, sim_y, sim_x}, 1000);
+        sim_->add_particle({sim_->grid_.domain_limits_.z / 2, sim_y, sim_x}, RHO_0);
     }
 
     void handle_events() {
@@ -113,9 +113,9 @@ class SFMLRenderer {
             x = std::clamp(x, 0.f, 800.f);
             y = std::clamp(y, 0.f, 600.f);
 
-            float radius = PARTICLE_RADIUS * scale_sim_to_window_;
+            float radius = 5.f;
 
-            sf::CircleShape shape(radius / 2);
+            sf::CircleShape shape(radius);
             shape.setOrigin(radius, radius);
             shape.setPosition(x, y);
             auto color = blue_to_red_gradient(

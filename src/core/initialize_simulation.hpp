@@ -2,27 +2,26 @@
 #include <memory>
 
 std::shared_ptr<Simulation> initialize_simulation() {
-    vec3<size_t> grid_cell_size = {1, 60, 80};
+    vec3<size_t> grid_dims = {1, 15, 20};
     vec3<double> grid_limits = {
-        static_cast<double>(grid_cell_size.z),
-        static_cast<double>(grid_cell_size.y),
-        static_cast<double>(grid_cell_size.x),
+        static_cast<double>(grid_dims.z),
+        static_cast<double>(grid_dims.y),
+        static_cast<double>(grid_dims.x),
     };
     grid_limits *= PARTICLE_RADIUS;
-    Grid grid(std::move(grid_cell_size), std::move(grid_limits));
+    Grid grid(std::move(grid_dims), std::move(grid_limits));
 
     std::vector<std::unique_ptr<Particle>> particles;
-    for (auto j = 1; j < (grid_cell_size.y / 2); ++j) {
-        for (auto i = 1; i < grid_cell_size.x - 1; ++i) {
+    for (auto j = 0; j < grid_dims.y; j += 2) {
+        for (auto i = ((j % 4) / 2); i < grid_dims.x; i += 2) {
             particles.emplace_back(std::make_unique<Particle>(make_particle(
                 {
                     grid_limits.z / 2,
-                    PARTICLE_RADIUS * j,
-                    PARTICLE_RADIUS * i,
+                    PARTICLE_RADIUS / 2 + PARTICLE_RADIUS * j,
+                    PARTICLE_RADIUS / 2 + PARTICLE_RADIUS * i,
                 },
-                1000)));
+                RHO_0)));
         }
     }
-    auto res = std::make_shared<Simulation>(std::move(grid), std::move(particles));
-    return res;
+    return std::make_shared<Simulation>(std::move(grid), std::move(particles));
 }

@@ -177,41 +177,42 @@ class Rendered2D {
     return this.sim.get_particles();
   };
 
+  setupDotCache = (r, g, b, radius = 4) => {
+    const size = radius * 2;
+    const dotCanvas = document.createElement("canvas");
+    dotCanvas.width = dotCanvas.height = size;
+    const dCtx = dotCanvas.getContext("2d");
+
+    const gradient = dCtx.createRadialGradient(
+      radius,
+      radius,
+      0,
+      radius,
+      radius,
+      radius
+    );
+    gradient.addColorStop(0, `rgba(${r},${g},${b}, 1)`);
+    gradient.addColorStop(1, `rgba(${r},${g},${b}, 1)`);
+
+    dCtx.fillStyle = gradient;
+    dCtx.beginPath();
+    dCtx.arc(radius, radius, radius, 0, 2 * Math.PI);
+    dCtx.fill();
+
+    return dotCanvas;
+  };
+
   draw = (particles) => {
     const ctx = this.ctx;
     ctx.fillStyle = "black";
     ctx.fillRect(0, 0, this.width(), this.height());
 
+    const radius = 4;
+    const dot = this.setupDotCache(255, 255, 255, radius);
     for (let i = 0; i < particles.size(); i++) {
       const p = particles.get(i);
-
-      const [r, g, b] = makeGradient(
-        p.density,
-        this.densityMin,
-        this.densityMax
-      );
-      // ctx.fillStyle = `rgb(${color[0]},${color[1]},${color[2]})`;
-      // ctx.fillStyle = `rgb(255,0,0)`;
-
       const pos = this.coordinatesSimToScreen(p.position);
-      ctx.beginPath();
-      ctx.arc(pos.x, pos.y, 4, 0, 2 * Math.PI);
-      const radius = 4;
-      const gradient = ctx.createRadialGradient(
-        pos.x,
-        pos.y,
-        0,
-        pos.x,
-        pos.y,
-        radius
-      );
-      gradient.addColorStop(0, `rgba(${r},${g},${b}, 1.0)`);
-      gradient.addColorStop(1, `rgba(${r},${g},${b}, 0.7)`);
-
-      ctx.fillStyle = gradient;
-      ctx.beginPath();
-      ctx.arc(pos.x, pos.y, radius, 0, 2 * Math.PI);
-      ctx.fill();
+      ctx.drawImage(dot, pos.x - radius, pos.y - radius);
     }
   };
 
