@@ -125,13 +125,17 @@ struct SimulationParameters {
     double viscosity = 0.01;
     double gravity = 10;
     double specific_volume = 2e6;
+    double target_density = 300;
 };
 const double ARTIFICIAL_VISC = 0;
 const double RHO_0 = -1.;
 
-static double compute_pressure(const Particle *p, double k) {
-    double density_diff = std::max(p->density - p->initial_density, 0.) / p->initial_density;
-    // double density_diff = (p->density - p->initial_density) / p->initial_density;
+static double compute_pressure(const Particle *p, double k,
+                               double target_density) {
+    double density_diff =
+        std::max(p->density - target_density, 0.) / target_density;
+    // double density_diff = (p->density - p->initial_density) /
+    // p->initial_density;
 
     return k * density_diff;
 }
@@ -184,8 +188,10 @@ class Simulation {
             return;
         }
         double gradW_ = gradW(r_norm, 4 * PARTICLE_RADIUS);
-        double pressure_1 = compute_pressure(p1, parameters_.specific_volume);
-        double pressure_2 = compute_pressure(p2, parameters_.specific_volume);
+        double pressure_1 = compute_pressure(p1, parameters_.specific_volume,
+                                             parameters_.target_density);
+        double pressure_2 = compute_pressure(p2, parameters_.specific_volume,
+                                             parameters_.target_density);
         double tmp = pressure_1 / (p1->density * p1->density) +
                      pressure_2 / (p1->density * p2->density);
         tmp *= gradW_;
@@ -225,7 +231,8 @@ class Simulation {
         for (auto &particle : particles_) {
             assert(!isnan(particle->force));
 
-            auto old_grid_cell = grid_.position_to_cell(particle->predicted_position);
+            auto old_grid_cell =
+                grid_.position_to_cell(particle->predicted_position);
             const auto old_position = particle->position;
 
             // Update velocity using forces
@@ -280,7 +287,8 @@ class Simulation {
             static_cast<double>(rand()) / RAND_MAX * 1e-1,
         };
 
-        grid_.add_particle(particles_.back().get(), particles_.back()->position);
+        grid_.add_particle(particles_.back().get(),
+                           particles_.back()->position);
     }
 
     void remove_particle_at(const vec3<double> position) {
@@ -317,13 +325,21 @@ class Simulation {
 
     void apply_central_force(vec3<double> center, double acceleration,
                              double radius) {
+
         for (auto &particle : particles_) {
-            auto r = center - particle->position;
-            auto distance = std::sqrt(r.dot(r));
-            if (distance >= radius) {
+            auto offset = center - particle->position;
+            auto dstSqr = offset.dot(offset);
+            if (dstSqr >= (radius * radius)) {
                 continue;
             }
-            particle->force += particle->mass * acceleration * r;
+            auto dst = std::sqrt(dstSqr);
+            auto distToInput =
+                dst < 1e-6 ? vec3<double>(0, 0, 0) : (offset / dst);
+            float centerT = 1 - dst / radius;
+
+            particle->force +=
+                particle->mass *
+                (distToInput * acceleration - particle->velocity) * centerT;
         }
     }
 
@@ -335,19 +351,24 @@ class Simulation {
         parameters_.specific_volume = specific_volume;
     }
 
+    void set_target_density(double target_density) {
+        parameters_.target_density = target_density;
+    }
+
     void update(double dt) {
         for (auto &p : particles_) {
             auto old_grid_cell = grid_.position_to_cell(p->position);
             update_gravity_force(p.get());
             p->velocity += dt * a(p.get());
             double artificial_dt = 1 / 60.;
-            
+
             // p->predicted_position = p->position;
             p->predicted_position = p->position + p->velocity * artificial_dt;
-            
+
             p->force = {0, 0, 0};
-            
-            auto predicted_grid_cell = grid_.position_to_cell(p->predicted_position);
+
+            auto predicted_grid_cell =
+                grid_.position_to_cell(p->predicted_position);
             if (predicted_grid_cell != old_grid_cell) {
                 grid_.remove_particle(p.get(), old_grid_cell);
                 grid_.add_particle(p.get(), p->predicted_position);
@@ -360,7 +381,7 @@ class Simulation {
             update_viscous_force(p1, p2);
         });
         // for_pair_neighbor_cells(grid_, [&](Particle *p1, Particle *p2) {
-            // apply_artificial_viscosity_pair_cells(p1, p2);
+        // apply_artificial_viscosity_pair_cells(p1, p2);
         // });
         update_positions(dt);
     }

@@ -38,6 +38,7 @@ EMSCRIPTEN_BINDINGS(simulation_bindings) {
         .function("apply_central_force", &Simulation::apply_central_force)
         .function("set_gravity", &Simulation::set_gravity)
         .function("set_specific_volume", &Simulation::set_specific_volume)
+        .function("set_target_density", &Simulation::set_target_density)
         .function("add_particle", &Simulation::add_particle)
         .function("update", &Simulation::update)
         .function("set_viscosity", &Simulation::set_viscosity)

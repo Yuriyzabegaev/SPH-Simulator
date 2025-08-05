@@ -9,7 +9,7 @@ function configureSlider(params) {
   const sliderValue = document.getElementById(`${params.sliderName}Value`);
   params.setterMethod(params.defaultVal);
   sliderValue.textContent = Number(params.defaultVal).toFixed(2);
-  slider.value = (100 / (params.maxVal - params.minVal)) * params.defaultVal;
+  slider.value = (100 / (params.maxVal - params.minVal)) * (params.defaultVal - params.minVal);
   slider.addEventListener("input", () => {
     const val =
       params.minVal + ((params.maxVal - params.minVal) / 100) * slider.value;
@@ -51,24 +51,31 @@ class Rendered2D {
     // Sliders
     configureSlider({
       sliderName: "viscositySlider",
-      minVal: 0.01,
-      maxVal: 0.2,
-      defaultVal: 0.1,
+      minVal: 0,
+      maxVal: 0.1,
+      defaultVal: 0.01,
       setterMethod: (visc) => this.sim.set_viscosity(visc),
     });
     configureSlider({
       sliderName: "gravitySlider",
       minVal: 0,
       maxVal: 20,
-      defaultVal: 9.8,
+      defaultVal: 0,
       setterMethod: (g) => this.sim.set_gravity(g),
     });
     configureSlider({
       sliderName: "specificVolumeSlider",
-      minVal: 1 / 100,
-      maxVal: 1 / 10,
-      defaultVal: 1 / 50,
-      setterMethod: (k) => this.sim.set_specific_volume(1 / k),
+      minVal: 1e6,
+      maxVal: 5e6,
+      defaultVal: 2e6,
+      setterMethod: (k) => this.sim.set_specific_volume(k),
+    });
+    configureSlider({
+      sliderName: "targetDensitySlider",
+      minVal: 200,
+      maxVal: 400,
+      defaultVal: 300,
+      setterMethod: (k) => this.sim.set_specific_volume(k),
     });
     this.densityMin = 500;
     this.densityMax = 2000;
@@ -131,7 +138,7 @@ class Rendered2D {
   };
 
   applyCentralForce = () => {
-    const magnitude = this.dragButton === 0 ? 30 : -30;
+    const magnitude = this.dragButton === 0 ? 40 : -40;
     const simCoords = this.coordinatesScreenToSim({
       z: 0,
       y: this.lastY,
