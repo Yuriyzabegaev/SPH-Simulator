@@ -17,6 +17,9 @@ class Grid {
     }
 
     inline size_t idx_1d(size_t z, size_t y, size_t x) const {
+        z = std::clamp(z, static_cast<size_t>(0), grid_dims_.z);
+        y = std::clamp(y, static_cast<size_t>(0), grid_dims_.y);
+        x = std::clamp(x, static_cast<size_t>(0), grid_dims_.x);
         return (z * grid_dims_.y + y) * grid_dims_.x + x;
     }
 
@@ -37,10 +40,13 @@ class Grid {
                                             }) {}
 
     vec3<size_t> position_to_cell(const vec3<double> &position) const {
+        const double z = std::clamp(position.z, 0., domain_limits_.z - grid_cell_size_.z / 4);
+        const double y = std::clamp(position.y, 0., domain_limits_.y - grid_cell_size_.y / 4);
+        const double x = std::clamp(position.x, 0., domain_limits_.x - grid_cell_size_.x / 4);
         return {
-            static_cast<size_t>(position.z / grid_cell_size_.z),
-            static_cast<size_t>(position.y / grid_cell_size_.y),
-            static_cast<size_t>(position.x / grid_cell_size_.x),
+            static_cast<size_t>(z / grid_cell_size_.z),
+            static_cast<size_t>(y / grid_cell_size_.y),
+            static_cast<size_t>(x / grid_cell_size_.x),
         };
     }
 
@@ -49,9 +55,9 @@ class Grid {
         return grid_[idx_1d(cell)];
     }
 
-    void add_particle(Particle *particle) {
-        assert(within_domain_bounds(particle->position));
-        size_t idx = idx_1d(position_to_cell(particle->position));
+    void add_particle(Particle *particle, const vec3<double> & position) {
+        // assert(within_domain_bounds(position));
+        size_t idx = idx_1d(position_to_cell(position));
         if (idx >= grid_.size()) {
             // Handle error: out-of-bounds particle position
             throw std::out_of_range("Particle position outside grid domain");
@@ -60,7 +66,9 @@ class Grid {
     }
 
     void remove_particle(Particle *particle, const vec3<size_t> &grid_cell) {
-        grid_[idx_1d(grid_cell)].erase(particle);
+        auto &data = grid_[idx_1d(grid_cell)];
+        assert(data.contains(particle));
+        data.erase(particle);
     }
 
     inline bool within_domain_bounds(const vec3<double> &pos) const {

@@ -4,10 +4,12 @@
 #include <memory>
 #include <utility>
 
-constexpr double PARTICLE_RADIUS = 0.1;
-
+constexpr double PARTICLE_RADIUS = 0.3;
+constexpr double MASS = 18;
+constexpr double TARGET_DENSITY = 300;
 struct Particle {
     vec3<double> position;
+    vec3<double> predicted_position = {0, 0, 0};
     double initial_density;
     double mass; // kg
     double density = 0;
@@ -22,5 +24,8 @@ struct Particle {
 Particle make_particle(vec3<double> position, double density) {
     double mass = density * 4 / 3 * M_PI * PARTICLE_RADIUS * PARTICLE_RADIUS *
                   PARTICLE_RADIUS;
-    return Particle(std::move(position), mass, density);
+
+    // return Particle(std::move(position), mass, density);
+    return Particle(std::move(position), MASS, TARGET_DENSITY);
+
 }

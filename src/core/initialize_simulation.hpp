@@ -2,7 +2,7 @@
 #include <memory>
 
 std::shared_ptr<Simulation> initialize_simulation() {
-    vec3<size_t> grid_dims = {1, 15, 20};
+    vec3<size_t> grid_dims = {1, 50, 60};
     vec3<double> grid_limits = {
         static_cast<double>(grid_dims.z),
         static_cast<double>(grid_dims.y),
@@ -12,8 +12,8 @@ std::shared_ptr<Simulation> initialize_simulation() {
     Grid grid(std::move(grid_dims), std::move(grid_limits));
 
     std::vector<std::unique_ptr<Particle>> particles;
-    for (auto j = 0; j < grid_dims.y; j += 2) {
-        for (auto i = ((j % 4) / 2); i < grid_dims.x; i += 2) {
+    for (auto j = 5; j < grid_dims.y - 5; j += 1) {
+        for (auto i = 15; i < grid_dims.x - 15; i += 1) {
             particles.emplace_back(std::make_unique<Particle>(make_particle(
                 {
                     grid_limits.z / 2,

@@ -60,7 +60,7 @@ class ExternalBoundaries {
                 new_pos -= plane->normal * new_dst;
                 new_pos -= plane->normal * tol;
                 vec3<double> vel_n = vel.dot(plane->normal) * plane->normal;
-                vel -= 1.1 * vel_n;
+                vel -= 1.9 * vel_n;
             }
         }
     }

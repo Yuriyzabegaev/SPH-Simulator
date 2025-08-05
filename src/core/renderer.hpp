@@ -12,14 +12,28 @@
 
 static constexpr int target_frame_ms = 1000 / 60; // ~16ms per frame for 60 FPS
 
+const float screenSizeX = 1400;
+const float screenSizeY = 600;
+
 std::array<int, 3> blue_to_red_gradient(float value, float max_value) {
-    float t =
-        value <= 0 ? 0.0f : (value >= max_value ? 1.0f : value / max_value);
-    int r = static_cast<int>(255 * t);
-    int g = 0;
-    int b = static_cast<int>(255 * (1.0f - t));
+    float t = value <= 0 ? 0.0f : (value >= max_value ? 1.0f : value / max_value);
+
+    int r, g, b;
+    if (t < 0.5f) {
+        float nt = t / 0.5f;  // normalized [0, 0.5] -> [0, 1]
+        r = 0;
+        g = static_cast<int>(255 * nt);
+        b = static_cast<int>(255 * (1.0f - nt));
+    } else {
+        float nt = (t - 0.5f) / 0.5f;  // normalized [0.5, 1] -> [0, 1]
+        r = static_cast<int>(255 * nt);
+        g = static_cast<int>(255 * (1.0f - nt));
+        b = 0;
+    }
+
     return {r, g, b};
 }
+
 
 class SFMLRenderer {
     float scale_sim_to_window_;
@@ -27,15 +41,16 @@ class SFMLRenderer {
     bool is_dragging_ = false;
     int mouse_x_ = -1;
     int mouse_y_ = -1;
-    const double dt_ =
-        static_cast<double>(target_frame_ms) / 1000; // Time step
+    const double dt_ = static_cast<double>(target_frame_ms) / 1000; // Time step
     float drag_radius_ = 100.f;
     std::shared_ptr<Simulation> sim_;
-    sf::RenderWindow window_{sf::VideoMode(800, 600), "Particles"};
+    sf::RenderWindow window_{sf::VideoMode(screenSizeX, screenSizeY),
+                             "Particles"};
 
     inline std::array<float, 2> tranform_to_simulation_coords(int x, int y) {
-        float sim_x = x * sim_->grid_.domain_limits_.x / 800.f;
-        float sim_y = (600.f - y) * sim_->grid_.domain_limits_.y / 600.f;
+        float sim_x = x * sim_->grid_.domain_limits_.x / screenSizeX;
+        float sim_y =
+            (screenSizeY - y) * sim_->grid_.domain_limits_.y / screenSizeY;
         return {sim_x, sim_y};
     }
 
@@ -66,7 +81,8 @@ class SFMLRenderer {
         // Reverse transformation: window coordinates to simulation
         // coordinates
         auto [sim_x, sim_y] = tranform_to_simulation_coords(pos.x, pos.y);
-        sim_->add_particle({sim_->grid_.domain_limits_.z / 2, sim_y, sim_x}, RHO_0);
+        sim_->add_particle({sim_->grid_.domain_limits_.z / 2, sim_y, sim_x},
+                           RHO_0);
     }
 
     void handle_events() {
@@ -94,8 +110,7 @@ class SFMLRenderer {
     }
 
     void apply_central_force(double value) {
-        auto [sim_x, sim_y] =
-            tranform_to_simulation_coords(mouse_x_, mouse_y_);
+        auto [sim_x, sim_y] = tranform_to_simulation_coords(mouse_x_, mouse_y_);
         sim_->apply_central_force(
             {sim_->grid_.domain_limits_.z / 2, sim_y, sim_x}, value,
             drag_radius_ / scale_sim_to_window_);
@@ -104,14 +119,22 @@ class SFMLRenderer {
     void render() {
         window_.clear(sf::Color::White);
 
+        double vmax = 7;
+        // double vmin = 1000;
+        // for (auto &particle : sim_->particles_) {
+        //     double v = std::sqrt(particle->velocity.dot(particle->velocity));
+        //     if (v < vmin) vmin = v;
+        //     if (v > vmax) vmax = v;
+        // }
+
         for (const auto &particle : sim_->particles_) {
             // Convert particle position to window coordinates
-            float x =
-                particle->position.x * 800 / sim_->grid_.domain_limits_.x;
-            float y = 600 - (particle->position.y * 600 /
-                             sim_->grid_.domain_limits_.y);
-            x = std::clamp(x, 0.f, 800.f);
-            y = std::clamp(y, 0.f, 600.f);
+            float x = particle->position.x * screenSizeX /
+                      sim_->grid_.domain_limits_.x;
+            float y = screenSizeY - (particle->position.y * screenSizeY /
+                                     sim_->grid_.domain_limits_.y);
+            x = std::clamp(x, 0.f, screenSizeX);
+            y = std::clamp(y, 0.f, screenSizeY);
 
             float radius = 5.f;
 
@@ -119,15 +142,14 @@ class SFMLRenderer {
             shape.setOrigin(radius, radius);
             shape.setPosition(x, y);
             auto color = blue_to_red_gradient(
-                std::sqrt(particle->velocity.dot(particle->velocity)), 10.);
-            // auto color = blue_to_red_gradient(particle->density - 2000, 500);
+                std::sqrt(particle->velocity.dot(particle->velocity)), vmax);
 
-            shape.setFillColor(sf::Color(color[0], color[1], color[2], 100));
+            shape.setFillColor(sf::Color(color[0], color[1], color[2], 255));
             window_.draw(shape);
         }
 
         if (is_dragging_) {
-            apply_central_force(30.);
+            apply_central_force(50.);
             sf::CircleShape drag_circle(drag_radius_);
             drag_circle.setOrigin(drag_radius_, drag_radius_);
             drag_circle.setPosition(
@@ -144,8 +166,8 @@ class SFMLRenderer {
 
   public:
     SFMLRenderer(std::shared_ptr<Simulation> sim) : sim_(sim) {
-        auto scale_x = 800. / sim->grid_.domain_limits_.x;
-        auto scale_y = 600. / sim->grid_.domain_limits_.y;
+        auto scale_x = screenSizeX / sim->grid_.domain_limits_.x;
+        auto scale_y = screenSizeY / sim->grid_.domain_limits_.y;
         scale_sim_to_window_ = std::max(scale_y, scale_x);
     }
 

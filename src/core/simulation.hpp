@@ -122,14 +122,17 @@ for_pair_neighbor_cells(const Grid &grid,
 }
 
 struct SimulationParameters {
-    double viscosity = 0.2;
+    double viscosity = 0.01;
     double gravity = 10;
-    double specific_volume = 0.01;
+    double specific_volume = 2e6;
 };
-const double RHO_0 = 1;
+const double ARTIFICIAL_VISC = 0;
+const double RHO_0 = -1.;
 
 static double compute_pressure(const Particle *p, double k) {
-    double density_diff = std::max(p->density - RHO_0, 0.) / RHO_0;
+    double density_diff = std::max(p->density - p->initial_density, 0.) / p->initial_density;
+    // double density_diff = (p->density - p->initial_density) / p->initial_density;
+
     return k * density_diff;
 }
 
@@ -141,7 +144,7 @@ class Simulation {
     void update_density_pair_cells(Particle *p1, Particle *p2) const {
         vec3<double> r = p2->position - p1->position;
         double r_norm = std::sqrt(r.dot(r));
-        double W_ = W(r_norm, 2 * PARTICLE_RADIUS);
+        double W_ = W(r_norm, 4 * PARTICLE_RADIUS);
         p1->density += p2->mass * W_;
         p2->density += p1->mass * W_;
     }
@@ -151,14 +154,13 @@ class Simulation {
         // artificial viscosity to reduce oscillations
         auto r = p2->position - p1->position;
         double r_norm = std::sqrt(r.dot(r));
-        double W_ = W(r_norm, 2 * PARTICLE_RADIUS);
+        double W_ = W(r_norm, 4 * PARTICLE_RADIUS);
 
         auto delta_v = p2->velocity - p1->velocity;
         auto rho = (p1->density + p2->density) / 2;
 
-        const double visc = 0.1;
-        p1->velocity += visc * p2->mass / rho * delta_v * W_;
-        p2->velocity -= visc * p1->mass / rho * delta_v * W_;
+        p1->velocity += ARTIFICIAL_VISC * p2->mass / rho * delta_v * W_;
+        p2->velocity -= ARTIFICIAL_VISC * p1->mass / rho * delta_v * W_;
     }
 
     void update_densities() {
@@ -172,11 +174,6 @@ class Simulation {
         for_pair_neighbor_cells(grid_, [&](Particle *p1, Particle *p2) {
             update_density_pair_cells(p1, p2);
         });
-
-        for_pair_neighbor_cells(grid_, [&](Particle *p1, Particle *p2) {
-            apply_artificial_viscosity_pair_cells(p1, p2);
-        });
-
     }
 
     void update_pressure_force(Particle *p1, Particle *p2) const {
@@ -186,7 +183,7 @@ class Simulation {
         if (r_norm < tol) {
             return;
         }
-        double gradW_ = gradW(r_norm, 2 * PARTICLE_RADIUS);
+        double gradW_ = gradW(r_norm, 4 * PARTICLE_RADIUS);
         double pressure_1 = compute_pressure(p1, parameters_.specific_volume);
         double pressure_2 = compute_pressure(p2, parameters_.specific_volume);
         double tmp = pressure_1 / (p1->density * p1->density) +
@@ -209,7 +206,7 @@ class Simulation {
         if (r_norm < tol) {
             return;
         }
-        double gradW_ = gradW(r_norm, 2 * PARTICLE_RADIUS);
+        double gradW_ = gradW(r_norm, 4 * PARTICLE_RADIUS);
         const double visc = parameters_.viscosity;
         // F_i = m_i * visc * Sum_j (m_j / rho_j * (v_j - v_i) * 2 ||nabla W||
         // / ||r||)
@@ -217,17 +214,6 @@ class Simulation {
                           (p2->velocity - p1->velocity) * 2 * gradW_;
         p1->force += visc_force / p2->density;
         p2->force -= visc_force / p1->density;
-    }
-
-    void update_forces() {
-        for (size_t i = 0; i < particles_.size(); ++i) {
-            update_gravity_force(particles_[i].get());
-        }
-
-        for_pair_neighbor_cells(grid_, [&](Particle *p1, Particle *p2) {
-            update_pressure_force(p1, p2);
-            update_viscous_force(p1, p2);
-        });
     }
 
     void update_positions(double dt) {
@@ -239,11 +225,11 @@ class Simulation {
         for (auto &particle : particles_) {
             assert(!isnan(particle->force));
 
-            auto old_grid_cell = grid_.position_to_cell(particle->position);
+            auto old_grid_cell = grid_.position_to_cell(particle->predicted_position);
             const auto old_position = particle->position;
 
             // Update velocity using forces
-            integrateRK4(particle.get(), dt, vmax);
+            integrate_semi_implicit_euler(particle.get(), dt, vmax);
 
             // Reset force for the next iteration
             particle->force = {0, 0, 0};
@@ -259,11 +245,16 @@ class Simulation {
             assert(grid_.within_domain_bounds(particle->position));
 
             // Update particle position in the grid
-            auto new_grid_cell = grid_.position_to_cell(particle->position);
-            if (new_grid_cell != old_grid_cell) {
-                grid_.remove_particle(particle.get(), old_grid_cell);
-                grid_.add_particle(particle.get());
-            }
+            update_particle_position_in_grid(particle.get(), old_grid_cell);
+        }
+    }
+
+    void update_particle_position_in_grid(Particle *p,
+                                          const vec3<size_t> &old_grid_cell) {
+        auto new_grid_cell = grid_.position_to_cell(p->position);
+        if (new_grid_cell != old_grid_cell) {
+            grid_.remove_particle(p, old_grid_cell);
+            grid_.add_particle(p, p->position);
         }
     }
 
@@ -276,7 +267,7 @@ class Simulation {
         : boundaries_(grid.domain_limits_), particles_(std::move(particles)),
           grid_(std::move(grid)) {
         for (auto &particle : particles_) {
-            grid_.add_particle(particle.get());
+            grid_.add_particle(particle.get(), particle->position);
         }
     }
 
@@ -289,7 +280,7 @@ class Simulation {
             static_cast<double>(rand()) / RAND_MAX * 1e-1,
         };
 
-        grid_.add_particle(particles_.back().get());
+        grid_.add_particle(particles_.back().get(), particles_.back()->position);
     }
 
     void remove_particle_at(const vec3<double> position) {
@@ -345,8 +336,32 @@ class Simulation {
     }
 
     void update(double dt) {
+        for (auto &p : particles_) {
+            auto old_grid_cell = grid_.position_to_cell(p->position);
+            update_gravity_force(p.get());
+            p->velocity += dt * a(p.get());
+            double artificial_dt = 1 / 60.;
+            
+            // p->predicted_position = p->position;
+            p->predicted_position = p->position + p->velocity * artificial_dt;
+            
+            p->force = {0, 0, 0};
+            
+            auto predicted_grid_cell = grid_.position_to_cell(p->predicted_position);
+            if (predicted_grid_cell != old_grid_cell) {
+                grid_.remove_particle(p.get(), old_grid_cell);
+                grid_.add_particle(p.get(), p->predicted_position);
+            }
+        }
+
         update_densities();
-        update_forces();
+        for_pair_neighbor_cells(grid_, [&](Particle *p1, Particle *p2) {
+            update_pressure_force(p1, p2);
+            update_viscous_force(p1, p2);
+        });
+        // for_pair_neighbor_cells(grid_, [&](Particle *p1, Particle *p2) {
+            // apply_artificial_viscosity_pair_cells(p1, p2);
+        // });
         update_positions(dt);
     }
 
