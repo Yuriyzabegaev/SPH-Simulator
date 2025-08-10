@@ -52,15 +52,15 @@ class Rendered2D {
     configureSlider({
       sliderName: "viscositySlider",
       minVal: 0,
-      maxVal: 0.1,
-      defaultVal: 0.01,
+      maxVal: 10,
+      defaultVal: 0.1,
       setterMethod: (visc) => this.sim.set_viscosity(visc),
     });
     configureSlider({
       sliderName: "gravitySlider",
       minVal: 0,
       maxVal: 20,
-      defaultVal: 0,
+      defaultVal: 10,
       setterMethod: (g) => this.sim.set_gravity(g),
     });
     configureSlider({
@@ -73,9 +73,9 @@ class Rendered2D {
     configureSlider({
       sliderName: "targetDensitySlider",
       minVal: 200,
-      maxVal: 400,
-      defaultVal: 300,
-      setterMethod: (k) => this.sim.set_specific_volume(k),
+      maxVal: 2000,
+      defaultVal: 1000,
+      setterMethod: (k) => this.sim.set_target_density(k),
     });
     this.densityMin = 500;
     this.densityMax = 2000;

@@ -132,9 +132,9 @@ const double RHO_0 = -1.;
 
 static double compute_pressure(const Particle *p, double k,
                                double target_density) {
-    double density_diff =
-        std::max(p->density - target_density, 0.) / target_density;
-    // double density_diff = (p->density - p->initial_density) /
+    // double density_diff =
+        // std::max(p->density - target_density, 0.) / target_density;
+    double density_diff = (p->density - target_density) / target_density;
     // p->initial_density;
 
     return k * density_diff;
@@ -327,19 +327,28 @@ class Simulation {
                              double radius) {
 
         for (auto &particle : particles_) {
-            auto offset = center - particle->position;
-            auto dstSqr = offset.dot(offset);
+            auto r = center - particle->position;
+            auto dstSqr = r.dot(r);
             if (dstSqr >= (radius * radius)) {
                 continue;
             }
-            auto dst = std::sqrt(dstSqr);
-            auto distToInput =
-                dst < 1e-6 ? vec3<double>(0, 0, 0) : (offset / dst);
-            float centerT = 1 - dst / radius;
+            particle->force += particle->mass * acceleration * r;
+        }
+    }
 
-            particle->force +=
-                particle->mass *
-                (distToInput * acceleration - particle->velocity) * centerT;
+    void apply_rotor_force(vec3<double> center, double acceleration,
+                             double radius) {
+
+        for (auto &particle : particles_) {
+            auto r = center - particle->position;
+            auto dstSqr = r.dot(r);
+            if (dstSqr >= (radius * radius)) {
+                continue;
+            }
+
+            vec3<double> rotor_dir{0, r.x, -r.y};
+            rotor_dir /= std::sqrt(rotor_dir.dot(rotor_dir));
+            particle->force += particle->mass * acceleration * rotor_dir;
         }
     }
 

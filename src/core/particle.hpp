@@ -5,7 +5,7 @@
 #include <utility>
 
 constexpr double PARTICLE_RADIUS = 0.3;
-constexpr double MASS = 18;
+constexpr double MASS = 56.6;
 constexpr double TARGET_DENSITY = 300;
 struct Particle {
     vec3<double> position;
