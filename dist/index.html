@@ -1,0 +1,53 @@
+<script type="module" crossorigin src="/assets/index-BC6JVyW5.js"></script>
+
+<body style="margin:0; height:100vh; display:flex; justify-content:center; align-items:center; background:#fff;">
+  <div id="status" style="position: absolute; top: 10px; left: 10px; color: black; font-family: sans-serif; z-index: 10;">
+    Loading WebAssembly module...
+  </div>
+
+  <!-- <div id="simulation-container" style="width: 800px; height: 600px; border: 1px solid black; position: relative;"> -->
+  <canvas id="simulationCanvas" width="1200" height="800"></canvas>
+
+  <div style="display: flex; flex-direction: column;">
+    <div>
+      <div>Viscosity:</div>
+      <input id="viscositySlider" type="range" min="0" max="100" value="50" />
+      <span id="viscositySliderValue">50</span>
+    </div>
+    <div>
+      <div>Gravity:</div>
+      <input id="gravitySlider" type="range" min="0" max="100" value="50" />
+      <span id="gravitySliderValue">50</span>
+    </div>
+    <div>
+      <div>Target Density:</div>
+      <input id="targetDensitySlider" type="range" min="0" max="100" value="50" />
+      <span id="targetDensitySliderValue">50</span>
+    </div>
+    <div>
+      <div>Compressibility:</div>
+      <input id="specificVolumeSlider" type="range" min="0" max="100" value="50" />
+      <span id="specificVolumeSliderValue">50</span>
+    </div>
+    <!-- <div>
+      <div>New particles density:</div>
+      <input id="densitySlider" type="range" min="0" max="100" value="50" />
+      <span id="densitySliderValue">50</span>
+    </div> -->
+    <div>
+      <div>Mouse interaction:</div>
+      <select id="mouseInteractionSelector">
+        <option value="Force">Attracting/Repulsing Force</option>
+        <option value="Particles">Add/Remove Particles</option>
+      </select>
+    </div>
+    <div style="display: flex;">
+      <div>Number of particles: </div>
+      <div id="numberOfParticlesValue">-1</div>
+    </div>
+  </div>
+
+  </div>
+
+  <script src="/sim_module.js"></script>
+</body>
