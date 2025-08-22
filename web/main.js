@@ -77,18 +77,18 @@ class Rendered2D {
       defaultVal: 1000,
       setterMethod: (k) => this.sim.set_target_density(k),
     });
-    this.densityMin = 500;
-    this.densityMax = 2000;
-    this.newParticlesDensity = 1000;
-    configureSlider({
-      sliderName: "densitySlider",
-      minVal: this.densityMin,
-      maxVal: this.densityMax,
-      defaultVal: this.newParticlesDensity,
-      setterMethod: (rho) => {
-        this.newParticlesDensity = rho;
-      },
-    });
+    // this.densityMin = 500;
+    // this.densityMax = 2000;
+    // this.newParticlesDensity = 1000;
+    // configureSlider({
+    //   sliderName: "densitySlider",
+    //   minVal: this.densityMin,
+    //   maxVal: this.densityMax,
+    //   defaultVal: this.newParticlesDensity,
+    //   setterMethod: (rho) => {
+    //     this.newParticlesDensity = rho;
+    //   },
+    // });
 
     const mouseInteractionSelector = document.getElementById(
       "mouseInteractionSelector"

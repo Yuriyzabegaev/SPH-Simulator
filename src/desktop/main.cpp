@@ -8,6 +8,7 @@
 
 int main() {
     auto simulation = initialize_simulation();
+    simulation->set_pressure_solver_type(1);
     SFMLRenderer renderer(std::move(simulation));
     renderer.run_until_complete();
 }

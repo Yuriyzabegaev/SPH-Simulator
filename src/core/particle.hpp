@@ -15,6 +15,10 @@ struct Particle {
     double density = 0;
     vec3<double> force = {0, 0, 0};
     vec3<double> velocity = {0, 0, 0};
+    // used only for IISPH
+    vec3<double> acceleration = {0, 0, 0};
+    double pressure = 0;
+
 
     Particle(vec3<double> position, double mass, double initial_density)
         : position(std::move(position)), mass(mass),

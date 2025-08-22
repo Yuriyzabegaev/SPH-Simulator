@@ -4,5 +4,4 @@ app
 dependencies
 dist
 node_modules
-web/public/sim_module.js
-web/public/sim_module.wasm
+web/public/

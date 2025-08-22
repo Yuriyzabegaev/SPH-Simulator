@@ -1,4 +1,5 @@
-#include "../core/simulation.hpp"
+#pragma once
+#include "simulation.hpp"
 #include <memory>
 
 std::shared_ptr<Simulation> initialize_simulation() {
