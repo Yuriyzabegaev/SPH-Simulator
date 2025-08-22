@@ -5,3 +5,4 @@ dependencies
 dist
 node_modules
 web/public/
+docs/
